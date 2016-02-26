@@ -1,57 +1,8 @@
  //http://docs.opencv.org/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html
 
-//g++ -lopencv_core -lopencv_calib3d -lopencv_highgui calib.cpp
 
-
-/*
-double calibrateCamera(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, Size imageSize, InputOutputArray cameraMatrix, InputOutputArray distCoeffs, OutputArrayOfArrays rvecs, OutputArrayOfArr  ys tvecs, int flags=0, TermCriteria criteria=TermCriteria( TermCriteria::COUNT+TermCriteria::EPS, 30, DBL_EPSILON) )
-
-objectPoints -> Vecteurs de coordonnées des points de la mire dans le repère de la mire
-					  (nbVecteurs = nombre de photos de la mire)
-
-imagePoints -> Vecteurs de coordonnées des points de la mire projetés dans l'image
-
-imageSize -> taille de l'image
-
-cameraMatrix -> matrice des paramètres intrinseque
-
-						|fx 0 u0|
-						|0 fy v0|
-						|0  0  1|
-/!\/!\/!\ voir doc pour l'initialisation /!\/!\/!\
-
- 
-distCoeffs -> vecteur des coefficients de distorsion
-				-> coefficients de distorsion ??
-
-rvecs -> vecteurs de rotation correspondants à la position de la mire dans chaque photo
-			(pour convertir une matrice de rotation en vecteur utilisable ici, voir doc Rodrigues)
-tvecs -> idem pour les translations  
-
-
-*/
-
-
-
-/*
-
-bool findChessboardCorners(InputArray image, Size patternSize, OutputArray corners, int flags=CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE )
-
-image -> image de la mire
-patternSize -> nombre de coins interieurs
-				-> patternSize = cvSize(points_per_row,points_per_colum)
-corners -> tableau de sortie des coins
-			-> dans le sens : parcours ligne par ligne de la gauche vers la droite
-
-
-Note
-
-The function requires white space (like a square-thick border, the wider the better) around the board to make the detection more robust in various environments. Otherwise, if there is no border and the background is dark, the outer black squares cannot be segmented properly and so the square grouping and ordering algorithm fails.
-
-*/
 #include <iostream>
 #include <fstream>
-
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
@@ -59,7 +10,6 @@ The function requires white space (like a square-thick border, the wider the bet
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 void calibrer(cv::Mat cameraMatrix, cv::Mat distCoeffs)
 {
 
@@ -71,14 +21,12 @@ void calibrer(cv::Mat cameraMatrix, cv::Mat distCoeffs)
 
 
 	cv::Size imageSize;
-	std::string folder_path = "img_calib/";
-/*
-	std::cout << "dossier contenant les images ?  --/home/oceane/Bureau/Tellus/img_calib/"" << std::endl ;
+	std::string folder_path ;
+	std::cout << "dossier contenant les images ?  exemple : /home/valentin/Bureau/projet/calibration4/" << std::endl ;
 	std::cin >>  folder_path ;
-*/
 
 	int nbImage = 6 ;
-	std::cout << "Nombre d'images ?  --6" << std::endl ;
+	std::cout << "Nombre d'images ?  exemple : 6" << std::endl ;
 	std::cin >>  nbImage ;
 
 	std::string image_pref = "tellus";
@@ -87,31 +35,29 @@ void calibrer(cv::Mat cameraMatrix, cv::Mat distCoeffs)
 	image_pref = image_pref + "-";
 
 	std::string image_ext;
-	std::cout << "Extension des images ?  (.jpg,.png... sans point avant) --jpg" << std::endl ;
+	std::cout << "Extension des images ?  (.jpg,.png... sans point avant)" << std::endl ;
 	std::cin >>  image_ext ;
 	image_ext = "." + image_ext;
 
 
-	int points_per_row = 9;
-	int points_per_colum = 6;
-	std::cout << "nombre de coins par lignes ? (uniquement les coins interieur de la mire)  --9" << std::endl ;
+	int points_per_row;
+	int points_per_colum;
+	std::cout << "nombre de coins par lignes ? (uniquement les coins interieur de la mire)  si mire fournie par opencv : 9" << std::endl ;
 	std::cin >>  points_per_row ;
-	std::cout << "nombre de coins par colonne ? (uniquement les coins interieur de la mire)  --6" << std::endl ;
+	std::cout << "nombre de coins par colonne ? (uniquement les coins interieur de la mire)  si mire fournie par opencv : 6" << std::endl ;
 	std::cin >>  points_per_colum ;
 
 	double square_world_width = 0.029; //en metre
-	std::cout << "taille d'un carré ? (en metres)  --0.029" << std::endl ;
+	std::cout << "taille d'un carré sur la mire imprimée ? (en metres) " << std::endl ;
 	std::cin >>  square_world_width ;
 
-	std::cout << " " << std::endl;
 	std::cout << "------------------------------------------------------------------------" << std::endl;
 	std::cout << "images de la forme : " << folder_path << image_pref << "00" << image_ext << std::endl;
 	std::cout << "contenu : " << std::endl;
 	std::cout << "-"<< points_per_row << " coins par lignes"  << std::endl;
 	std::cout << "-"<< points_per_colum << " coins par colonnes"  << std::endl;
-	std::cout << "taille des carrés = "<< square_world_width  << " m"<< std::endl;
+	std::cout << "taille des carrés = "<< square_world_width  << "m"<< std::endl;
 	std::cout << "------------------------------------------------------------------------" << std::endl;
-	std::cout << " " << std::endl;
 
 	//Création de la liste (des noms) des images
 	std::vector<std::string> liste_image;
@@ -141,21 +87,16 @@ void calibrer(cv::Mat cameraMatrix, cv::Mat distCoeffs)
 	for(int image=0;image<nbImage;image++)
 	{
 		
-		std::string image_name = liste_image[image]; 
+		std::string image_name = liste_image[image];
 		std::string img_path = folder_path+image_name;
 
-
-
-		
 		//importer une image
 		cv::Mat mire = cv::imread(img_path);
-		
 		if(mire.empty())
 		{
 		  std::cerr<<"Il y a un problème dans la calibration de l'image, veuillez vérifier que le dossier est situé au même endroit que le binaire\n ou que vous ne vous êtes pas trompés dans les paramètres précédents\n";
 		 return ; 
 		}
-		
 		imageSize = cv::Size(mire.cols,mire.rows);
 		//déterminer les coordonnées 3D des points (dans le repère de la mire)
 		std::vector<cv::Point3f> v ;
@@ -218,8 +159,6 @@ void writeMatToFile(cv::Mat & m, const char* filename)
     fout.close();
 }
 
-
-
 void readFileToMat(cv::Mat & m, const char* filename)
 {
     std::ifstream fin(filename);
@@ -243,29 +182,27 @@ void readFileToMat(cv::Mat & m, const char* filename)
 int main( int argc, const char* argv[] )
 { 
 	cv::Mat cameraMatrix = cv::Mat::zeros(3, 3, CV_64FC1); 
+	
 	cv::Mat distCoeffs = cv::Mat::zeros(1, 5, CV_64FC1);
+//Output vector of distortion coefficients (k1,k2,p1,p2[,k3[,k4,k5,k6],[s1,s2,s3,s4]]) of 4, 5, 8 or 12 elements.
 
 	calibrer(cameraMatrix, distCoeffs);
-
 	//Sauvegarde de la matrice
 	const char* filename = "calibration_matrix.txt";
    writeMatToFile(cameraMatrix,filename);
-
+	filename = "distorsion_matrix.txt";
+	writeMatToFile(distCoeffs,filename);
+	
 	std::cout << "param " << std::endl << cameraMatrix << std::endl;
 	std::cout << "distor " << std::endl << distCoeffs << std::endl;
 	
 
 	cv::Mat m = cv::Mat::zeros(3, 3, CV_64FC1);
+	filename = "calibration_matrix.txt";
 	readFileToMat(m,filename);
-	std::cout << "read mat " << std::endl << m<< std::endl;
-	
-
+	std::cout << "read mat(calib matrix) " << std::endl << m<< std::endl;
 	return 0; 
 }
-
-
-
-
 
 
 

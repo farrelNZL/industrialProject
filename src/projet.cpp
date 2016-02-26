@@ -104,8 +104,6 @@ std::vector<cv::Point2f> find_red(cv::Mat W,int h, int w, int val_min,int rayon_
 						if(I.at<unsigned char>(i+k,j+k) > val_min)
 						{nbPixel++;}
 					}
-					//std::cout << "nbpixel rouge : " << nbPixel << std::endl;
-					
 					if(nbPixel >seuil_nbPixel && reds.size() < 2) //point détecté !	
 					{
 						for(int k1=max(0,i-rayon_zone);k1<min(i+rayon_zone,h);k1++)
@@ -226,9 +224,7 @@ void find_p(cv::Mat * composante_imgOriginal, cv::Mat * composante_imgred, std::
 	if(nbPointsDetec != 2)
 	{
 	//////////////// si les rouges ne sont pas trouvés, ou qu'il y a plus de 2 points détéctés //////////////////////////////
-	std::cout << "points rouges déctectés : " << nbPointsDetec << std::endl;
-	std::cout <<  "PAS ENCORE IMPLEMENTE" << std::endl;
-	//flag=true;	
+	std::cout << "Erreur : nombre LED rouges déctecté = " << nbPointsDetec << " != 2)" << std::endl;
 	}
 
 	if(flag)
@@ -270,44 +266,6 @@ void find_p(cv::Mat * composante_imgOriginal, cv::Mat * composante_imgred, std::
 		calc_point(dperp1[0],dperp1[1],w,pend_perp1);
 		calc_point(dperp2[0],dperp2[1],0,pstart_perp2);
 		calc_point(dperp2[0],dperp2[1],w,pend_perp2);
-		
-		/*
-		cv::line(composante_imgOriginal[1], pstart, pend, cv::Scalar(255,255,255));
-		cv::line(composante_imgOriginal[1], pstart_perp1, pend_perp1, cv::Scalar(255,255,255));
-		cv::line(composante_imgOriginal[1], pstart_perp2, pend_perp2, cv::Scalar(255,255,255));
-		
-		cv::Point2f pdec1;
-		cv::Point2f pdec2;
-		cv::Point2f pdec3;
-		cv::Point2f pdec4;
-		
-		pdec1.x = pstart_perp1.x - rayon_zone_white;
-		pdec3.x = pend_perp1.x - rayon_zone_white;
-		pdec2.x = pstart_perp1.x + rayon_zone_white;
-		pdec4.x = pend_perp1.x + rayon_zone_white;
-		pdec1.y = pstart_perp1.y;
-		pdec3.y = pend_perp1.y;
-		pdec2.y = pstart_perp1.y;
-		pdec4.y = pend_perp1.y;
-		cv::line(composante_imgOriginal[1], pdec1, pdec3, cv::Scalar(255,255,255));
-		cv::line(composante_imgOriginal[1], pdec2, pdec4, cv::Scalar(255,255,255));
-		
-		cv::Point2f pdec12;
-		cv::Point2f pdec22;
-		cv::Point2f pdec32;
-		cv::Point2f pdec42;
-		
-		pdec12.x = pstart_perp2.x - rayon_zone_white;
-		pdec32.x = pend_perp2.x - rayon_zone_white;
-		pdec22.x = pstart_perp2.x + rayon_zone_white;
-		pdec42.x = pend_perp2.x + rayon_zone_white;
-		pdec12.y = pstart_perp2.y;
-		pdec32.y = pend_perp2.y;
-		pdec22.y = pstart_perp2.y;
-		pdec42.y = pend_perp2.y;
-		cv::line(composante_imgOriginal[1], pdec12, pdec32, cv::Scalar(255,255,255));
-		cv::line(composante_imgOriginal[1], pdec22, pdec42, cv::Scalar(255,255,255));
-		*/
 
 		//calculer la distance entre les leds rouges
 		cv::Point2f  p01(j1,i1);
@@ -361,85 +319,55 @@ void readFileToMat(cv::Mat & m, const char* filename)
     fin.close();
 }
 
-int main(int argc, char** argv )
+int projet(double cable,
+			int min,
+			int max,
+			
+			int rayon_zone_red,
+			int seuil_nbPixel_red,
+			int val_min_red,
+			double coeff_min_white,
+			double coeff_max_white,
+			int rayon_zone_white,
+			int seuil_nbPixel_white,
+			int val_min_white,
+			bool affichage,
+
+			std::string video_path,
+			std::vector<cv::Point3f> & objPoints,
+			const char* calibration_path,
+			const char* distorsion_path
+	)
 {
-double cable = 1.5;
-std::vector<cv::Point3f> objPoints;
-/*
-228,903175	243,57925
--237,193325	-242,18675
--242,993025	236,93425
-251,283175	-238,32675
-*/
-objPoints.push_back(cv::Point3f(-0.237193325, -0.24218675, cable));
-objPoints.push_back(cv::Point3f(0.251283175, -0.23832675,cable));
-objPoints.push_back(cv::Point3f(-0.242993025, 0.23693425, cable));
-objPoints.push_back(cv::Point3f(0.228903175, 0.24357925, cable));
+	//chargement des fichiers de calibration de la camera
+	cv::Mat cam = cv::Mat::zeros(3, 3, CV_64FC1);
+	cv::Mat distorsion = cv::Mat::zeros(1, 5, CV_64FC1);
+	readFileToMat(cam,calibration_path);  
+	readFileToMat(distorsion,distorsion_path);
 
-std::cout << "position des points 3D : " << std::endl << objPoints  << std::endl;
-
-//points dans le repere camera
-std::vector<cv::Point2f> imgPoints;
-std::vector<cv::Point2f> imgPoints_old;
-std::vector<cv::Point2f> imgPointsReproj;
-imgPoints_old.push_back(cv::Point2f(0,0));
-imgPoints_old.push_back(cv::Point2f(0,0));
-imgPoints_old.push_back(cv::Point2f(0,0));
-imgPoints_old.push_back(cv::Point2f(0,0));
-//chargement des fichiers de calibration de la camera
-cv::Mat cam = cv::Mat::zeros(3, 3, CV_64FC1);
-cv::Mat distorsion = cv::Mat::zeros(1, 5, CV_64FC1);
-const char* filename = "calibration_matrix.txt";
-readFileToMat(cam,filename);  
-filename = "distorsion_matrix.txt";
-readFileToMat(distorsion,filename);
-
-//cv::VideoCapture cap("/home/valentin/Bureau/projet/calibration5/VIDEOTEST 2.mp4"); 
-//cv::VideoCapture cap("/home/farrelnzl/Projet/Indus/aMettreSurLeGit/video/VIDEOTEST 2.mp4"); 
-cv::VideoCapture cap("video/VIDEOTEST 2.mp4"); 
-
+	cv::VideoCapture cap(video_path); 
     if ( !cap.isOpened() ) 
     {
          std::cout << "Cannot open the web cam" << std::endl;
          return -1;
     }
-
+    //points dans le repere camera
+	std::vector<cv::Point2f> imgPoints;
+	std::vector<cv::Point2f> imgPoints_old;
+	imgPoints_old.push_back(cv::Point2f(0,0));
+	imgPoints_old.push_back(cv::Point2f(0,0));
+	imgPoints_old.push_back(cv::Point2f(0,0));
+	imgPoints_old.push_back(cv::Point2f(0,0));
    cv::Mat imgOriginal;
    cv::Mat imgFinal;
-	int min = 255;
-	int max = 255;
-	int nbpts = 0;
-	int seuil = 200;
 	
-	/*
-	// param
-	int rayon_zone_red = 40;
-	int seuil_nbPixel_red = 20 ;
-	int val_min_red = 250;
-	double coeff_min_white = 0.6 ;
-	double coeff_max_white = 1.0 ;
-	int rayon_zone_white = 20;
-	double seuil_nbPixel_white = 20 ;
-	int val_min_white = 250; 
-	// param
-	*/
-	
-	int rayon_zone_red = 45;
-	int seuil_nbPixel_red = 35 ;
-	int val_min_red = 250;
-	double coeff_min_white = 0.8 ;
-	double coeff_max_white = 1.2 ;
-	int rayon_zone_white = 30;
-	double seuil_nbPixel_white = 20 ;
-	int val_min_white = 250; 
-	
-	cv::namedWindow("Original", CV_WINDOW_AUTOSIZE );	
-	cv::moveWindow("Original",10,10);
-	//cv::resizeWindow("Original", 400, 300);
-	cv::namedWindow("final", CV_WINDOW_AUTOSIZE );	
-	cv::moveWindow("final",440,10);
-	//cv::resizeWindow("final", 400, 300);
-	
+	if(affichage)
+	{
+		cv::namedWindow("Original", CV_WINDOW_AUTOSIZE );	
+		cv::moveWindow("Original",10,10);
+		cv::namedWindow("final", CV_WINDOW_AUTOSIZE );	
+		cv::moveWindow("final",440,10);
+	}
 //faire boucle sur video
  while (true)
     {
@@ -450,8 +378,10 @@ cv::VideoCapture cap("video/VIDEOTEST 2.mp4");
              std::cout << "Cannot read a frame from video stream" << std::endl;
              break;
         }
+        if(affichage)
+    {
  	cv::imshow("Original", imgOriginal);
-
+ 	}
 	cv::Mat channel_red[3];
  	cv::split(imgOriginal, channel_red);
  	
@@ -469,31 +399,10 @@ cv::VideoCapture cap("video/VIDEOTEST 2.mp4");
 
 	find_p(channel_white, channel_red, imgPoints, rayon_zone_red, seuil_nbPixel_red, val_min_red, coeff_min_white, coeff_max_white, rayon_zone_white, seuil_nbPixel_white, val_min_white);
 	
-	int rayon_cercle = 10;
 	
-	/*
-	imgFinal = imgOriginal;
-	cv::Mat channel_imgFinal[3];
-	cv::split(imgFinal,channel_imgFinal);
-	for(int x=2;x<imgPoints.size();x++)
-	{
-		cv::circle(channel_imgFinal[0], imgPoints[x],rayon_cercle, cv::Scalar(0,0,0));
-		cv::circle(channel_imgFinal[1], imgPoints[x],rayon_cercle, cv::Scalar(0,0,0));
-		cv::circle(channel_imgFinal[2], imgPoints[x],rayon_cercle, cv::Scalar(255,255,255));
-	}
-	std::cout << "nb pts detecté : " << imgPoints.size() << std::endl;
-	cv::merge(channel_imgFinal,3,imgFinal);
-	cv::imshow("final",imgFinal);
-	*/
 	if(imgPoints.size() != 4)
 	{
-	/*
-		std::string name;
-		std::cin >> name;
-		cv::imwrite(name,imgFinal);
-	*/
-		std::cout << "nb pts detecté : " << imgPoints.size() << std::endl;
-		std::cout << "PB NB PTS !!!!!!!!" << std::endl;
+		std::cout << "Erreur : nombre de LED total detecté = " << imgPoints.size() << " (!=4)" << std::endl;
 		
 		imgPoints.clear();
 		imgPoints = imgPoints_old;
@@ -507,62 +416,37 @@ cv::VideoCapture cap("video/VIDEOTEST 2.mp4");
 	cv::Mat result = cv::Mat::zeros(3, 4, CV_64FC1);
 	solvePNP (objPoints, imgPoints, cam, distorsion, result);
 	//std::cout << "matrice : " << std::endl << result << std::endl;
-
-	cv::Mat rvec = result(cv::Rect(0,0,3,3));
-	cv::Mat tvec = result(cv::Rect(3,0,1,3));
-	imgPointsReproj.clear();
-	cv::projectPoints(objPoints, rvec,tvec, cam, distorsion,imgPointsReproj);
+	//result contient la matrice resultat de la position estimee
 	
 	imgFinal = imgOriginal;
 	cv::Mat channel_imgFinal[3];
 	cv::split(imgFinal,channel_imgFinal);
-	//points rouges
-	for(int x=0;x<imgPoints.size()/2;x++)
+	if(affichage)
 	{
-		cv::circle(channel_imgFinal[0], imgPoints[x],rayon_cercle, cv::Scalar(0,0,0));
-		cv::circle(channel_imgFinal[1], imgPoints[x],rayon_cercle, cv::Scalar(0,0,0));
-		cv::circle(channel_imgFinal[2], imgPoints[x],rayon_cercle, cv::Scalar(0,0,0));
+		int rayon_cercle = 10;
+		//points rouges
+		for(int x=0;x<imgPoints.size()/2;x++)
+		{
+			cv::circle(channel_imgFinal[0], imgPoints[x],rayon_cercle, cv::Scalar(0,0,0));
+			cv::circle(channel_imgFinal[1], imgPoints[x],rayon_cercle, cv::Scalar(0,0,0));
+			cv::circle(channel_imgFinal[2], imgPoints[x],rayon_cercle, cv::Scalar(0,0,0));
+			
+		}
+		//points verts
+		for(int x=imgPoints.size()/2;x<imgPoints.size();x++)
+		{
+			cv::circle(channel_imgFinal[0], imgPoints[x],rayon_cercle, cv::Scalar(0,0,0));
+			cv::circle(channel_imgFinal[1], imgPoints[x],rayon_cercle, cv::Scalar(0,0,0));
+			cv::circle(channel_imgFinal[2], imgPoints[x],rayon_cercle, cv::Scalar(0,0,0));		
+		}
 		
-		cv::circle(channel_imgFinal[0], imgPointsReproj[x],rayon_cercle, cv::Scalar(255,255,255));
-		cv::circle(channel_imgFinal[1], imgPointsReproj[x],rayon_cercle, cv::Scalar(255,255,255));
-		cv::circle(channel_imgFinal[2], imgPointsReproj[x],rayon_cercle, cv::Scalar(255,255,255));
-		
+		cv::merge(channel_imgFinal,3,imgFinal);
+		cv::imshow("final",imgFinal);
 	}
-	//points verts
-	for(int x=imgPoints.size()/2;x<imgPoints.size();x++)
-	{
-		cv::circle(channel_imgFinal[0], imgPoints[x],rayon_cercle, cv::Scalar(0,0,0));
-		cv::circle(channel_imgFinal[1], imgPoints[x],rayon_cercle, cv::Scalar(0,0,0));
-		cv::circle(channel_imgFinal[2], imgPoints[x],rayon_cercle, cv::Scalar(0,0,0));
-	
-		cv::circle(channel_imgFinal[0], imgPointsReproj[x],rayon_cercle, cv::Scalar(255,255,255));
-		cv::circle(channel_imgFinal[1], imgPointsReproj[x],rayon_cercle, cv::Scalar(255,255,255));
-		cv::circle(channel_imgFinal[2], imgPointsReproj[x],rayon_cercle, cv::Scalar(255,255,255));		
-	}
-	
-	cv::merge(channel_imgFinal,3,imgFinal);
-	cv::imshow("final",imgFinal);
-	
-	//std::cout << "pts : " << std::endl << points << std::endl;
-	
-	double erreur = 0;
-	for(int i = 0;i<imgPoints.size();i++)
-	{
-		erreur = erreur + (imgPoints[i].x - imgPointsReproj[i].x)*(imgPoints[i].x - imgPointsReproj[i].x) + (imgPoints[i].y - imgPointsReproj[i].y)*(imgPoints[i].y - imgPointsReproj[i].y);
-	}
-	erreur = erreur/imgPoints.size();
-	std::cout << "erreur : " << erreur << std::endl;
-
-	//fin des coords des pts en pixel
-	//attention a la mise en correspondace
-	///////////////////////////////////////////////////////////////////////////
-	
 
         if (cv::waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
        {
-		   	cv::imwrite("Ioriginal.png",imgOriginal);
-	       	cv::imwrite("avec_cercle.png",imgFinal);
-			 std::cout << "esc key is pressed by user" << std::endl;
+			std::cout << "esc key is pressed by user" << std::endl;
             break; 
        }
     }
